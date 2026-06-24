@@ -28,6 +28,18 @@ export type {
 // Providers
 export { BaseProvider } from './providers/base.provider';
 
+// Errors
+export {
+  AiError,
+  AiAuthenticationError,
+  AiRateLimitError,
+  AiTimeoutError,
+  AiInvalidRequestError,
+  AiConnectionError,
+  AiProviderError,
+} from './core/errors';
+export type { AiErrorOptions } from './core/errors';
+
 // Core utilities
 export { withRetry } from './core/retry';
 export type { RetryOptions } from './core/retry';
