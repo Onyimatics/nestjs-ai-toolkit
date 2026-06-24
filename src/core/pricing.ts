@@ -50,8 +50,17 @@ export const DEFAULT_MODEL_PRICING: ModelPricingMap = {
 
   // Anthropic - current generation (verified June 2026)
   'claude-opus-4-8': { promptCostPer1k: 0.005, completionCostPer1k: 0.025 },
+  'claude-opus-4-7': { promptCostPer1k: 0.005, completionCostPer1k: 0.025 },
   'claude-sonnet-4-6': { promptCostPer1k: 0.003, completionCostPer1k: 0.015 },
   'claude-haiku-4-5': { promptCostPer1k: 0.001, completionCostPer1k: 0.005 },
+  'claude-haiku-4-5-20251001': {
+    promptCostPer1k: 0.001,
+    completionCostPer1k: 0.005,
+  },
+  // Newer top-tier models such as Claude Fable 5 and Claude Mythos 5 are
+  // intentionally omitted from the defaults: their availability has been
+  // unstable and they price above the Opus tier. Supply them through the
+  // `pricing` override in AiModuleOptions if you use them.
 
   // Anthropic - legacy (more expensive, migration recommended)
   'claude-3-opus': { promptCostPer1k: 0.015, completionCostPer1k: 0.075 },
