@@ -46,6 +46,10 @@ export default tseslint.config(
       '@typescript-eslint/no-unsafe-call': 'off',
       '@typescript-eslint/no-unsafe-argument': 'off',
       '@typescript-eslint/no-unsafe-return': 'off',
+      // Referencing jest mock methods (e.g. `expect(mock.complete)`) is safe.
+      '@typescript-eslint/unbound-method': 'off',
+      // Async-generator fixtures legitimately have no `await`.
+      '@typescript-eslint/require-await': 'off',
     },
   },
   eslintConfigPrettier,
