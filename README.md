@@ -162,11 +162,11 @@ console.log(response.usage);
 This project is being built in the open, one milestone at a time.
 
 - [x] Project scaffold and core architecture
-- [ ] OpenAI provider with completion support
-- [ ] Streaming responses
-- [ ] Automatic retries with exponential backoff
+- [x] OpenAI provider with completion support
+- [x] Streaming responses
+- [x] Automatic retries with exponential backoff
 - [ ] Anthropic provider via the unified interface
-- [ ] Token counting and cost tracking
+- [x] Token counting and cost tracking
 - [ ] Rate limiting
 - [ ] RAG helper utilities
 - [ ] First stable release (v1.0.0)
