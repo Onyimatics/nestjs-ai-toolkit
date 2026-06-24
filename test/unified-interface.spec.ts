@@ -51,7 +51,7 @@ function makeAnthropicProvider(): AiProvider {
     id: 'msg_test',
     type: 'message',
     role: 'assistant',
-    model: 'claude-sonnet-4',
+    model: 'claude-sonnet-4-6',
     content: [{ type: 'text', text: 'unified!' }],
     stop_reason: 'end_turn',
     usage: { input_tokens: 10, output_tokens: 20 },
@@ -61,7 +61,7 @@ function makeAnthropicProvider(): AiProvider {
     {
       provider: 'anthropic',
       apiKey: 'test-key',
-      defaultModel: 'claude-sonnet-4',
+      defaultModel: 'claude-sonnet-4-6',
     },
     client,
   );

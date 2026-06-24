@@ -20,16 +20,22 @@ export interface ModelPricing {
 export type ModelPricingMap = Record<string, ModelPricing>;
 
 /**
- * The single source of truth for built-in model pricing, in US dollars per
- * 1,000 tokens (separate input and output rates).
+ * The single source of truth for built-in model pricing.
  *
- * IMPORTANT: provider prices change over time. These numbers must be verified
- * against the official pricing pages before you rely on them for billing:
+ * - All prices are in US dollars per 1,000 tokens.
+ * - Each model has separate input (prompt) and output (completion) rates.
+ * - Verified against the official OpenAI and Anthropic pricing pages in
+ *   June 2026.
+ * - Prices and model identifiers change frequently. Consumers should verify
+ *   against the provider pricing pages, and can override any price via the
+ *   `pricing` option in AiModuleOptions without editing this file.
+ *
+ * Sources:
  *   OpenAI:    https://openai.com/api/pricing
- *   Anthropic: https://www.anthropic.com/pricing
- * Last verified: 2026-06-24. Treat anything not listed here as unknown pricing
- * (see {@link resolveModelPricing}), and override or extend via the `pricing`
- * module option rather than editing provider code.
+ *   Anthropic: https://platform.claude.com/docs/en/about-claude/pricing
+ *
+ * Anything not listed here is treated as unknown pricing (see
+ * {@link resolveModelPricing}).
  */
 export const DEFAULT_MODEL_PRICING: ModelPricingMap = {
   // OpenAI
@@ -42,13 +48,15 @@ export const DEFAULT_MODEL_PRICING: ModelPricingMap = {
   'gpt-4': { promptCostPer1k: 0.03, completionCostPer1k: 0.06 },
   'gpt-3.5-turbo': { promptCostPer1k: 0.0005, completionCostPer1k: 0.0015 },
 
-  // Anthropic
-  'claude-opus-4': { promptCostPer1k: 0.015, completionCostPer1k: 0.075 },
-  'claude-sonnet-4': { promptCostPer1k: 0.003, completionCostPer1k: 0.015 },
+  // Anthropic - current generation (verified June 2026)
+  'claude-opus-4-8': { promptCostPer1k: 0.005, completionCostPer1k: 0.025 },
+  'claude-sonnet-4-6': { promptCostPer1k: 0.003, completionCostPer1k: 0.015 },
+  'claude-haiku-4-5': { promptCostPer1k: 0.001, completionCostPer1k: 0.005 },
+
+  // Anthropic - legacy (more expensive, migration recommended)
+  'claude-3-opus': { promptCostPer1k: 0.015, completionCostPer1k: 0.075 },
   'claude-3-5-sonnet': { promptCostPer1k: 0.003, completionCostPer1k: 0.015 },
   'claude-3-5-haiku': { promptCostPer1k: 0.0008, completionCostPer1k: 0.004 },
-  'claude-3-opus': { promptCostPer1k: 0.015, completionCostPer1k: 0.075 },
-  'claude-3-sonnet': { promptCostPer1k: 0.003, completionCostPer1k: 0.015 },
   'claude-3-haiku': { promptCostPer1k: 0.00025, completionCostPer1k: 0.00125 },
 };
 

@@ -26,7 +26,7 @@ function buildProvider(
   const resolved: AiModuleOptions = {
     provider: 'anthropic',
     apiKey: 'test-key',
-    defaultModel: 'claude-sonnet-4',
+    defaultModel: 'claude-sonnet-4-6',
     ...options,
   };
   return new AnthropicProvider(resolved, buildClient(create));
@@ -38,7 +38,7 @@ function anthropicMessage(text: string): unknown {
     id: 'msg_test',
     type: 'message',
     role: 'assistant',
-    model: 'claude-sonnet-4',
+    model: 'claude-sonnet-4-6',
     content: [{ type: 'text', text }],
     stop_reason: 'end_turn',
     usage: { input_tokens: 1000, output_tokens: 2000 },
@@ -80,14 +80,14 @@ describe('AnthropicProvider', () => {
 
       expect(create).toHaveBeenCalledTimes(1);
       expect(create.mock.calls[0][0]).toMatchObject({
-        model: 'claude-sonnet-4',
+        model: 'claude-sonnet-4-6',
         max_tokens: 256,
         stream: false,
         temperature: 0.5,
         messages: [{ role: 'user', content: 'Hi' }],
       });
 
-      // Cost for claude-sonnet-4: (1k in * $0.003) + (2k out * $0.015)
+      // Cost for claude-sonnet-4-6: (1k in * $0.003) + (2k out * $0.015)
       // = 0.003 + 0.03 = 0.033
       expect(response.content).toBe('Hello there!');
       expect(response.usage).toEqual({

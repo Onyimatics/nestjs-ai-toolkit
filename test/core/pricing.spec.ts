@@ -16,7 +16,7 @@ describe('pricing registry', () => {
   it('includes both OpenAI and Anthropic models', () => {
     expect(resolveModelPricing('gpt-4o')).not.toBeNull();
     expect(resolveModelPricing('gpt-4o-mini')).not.toBeNull();
-    expect(resolveModelPricing('claude-sonnet-4')).not.toBeNull();
+    expect(resolveModelPricing('claude-sonnet-4-6')).not.toBeNull();
     expect(resolveModelPricing('claude-3-5-haiku')).not.toBeNull();
   });
 

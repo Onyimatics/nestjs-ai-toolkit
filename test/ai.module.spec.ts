@@ -8,7 +8,8 @@ describe('AiModule', () => {
   it.each(['openai', 'anthropic'] as const)(
     'provides AiService when configured with the %s provider',
     async (provider) => {
-      const defaultModel = provider === 'openai' ? 'gpt-4o' : 'claude-sonnet-4';
+      const defaultModel =
+        provider === 'openai' ? 'gpt-4o' : 'claude-sonnet-4-6';
       const moduleRef: TestingModule = await Test.createTestingModule({
         imports: [
           AiModule.forRoot({ provider, apiKey: 'test-key', defaultModel }),
