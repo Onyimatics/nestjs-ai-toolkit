@@ -1,6 +1,6 @@
 {
   "name": "nestjs-ai-toolkit",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Production-ready LLM integration for NestJS. OpenAI, Anthropic, and more through one unified interface with streaming, retries, rate limiting, and cost tracking.",
   "author": "Onyinye Favour Ezike",
   "license": "MIT",

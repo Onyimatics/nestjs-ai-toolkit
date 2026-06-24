@@ -165,7 +165,7 @@ This project is being built in the open, one milestone at a time.
 - [x] OpenAI provider with completion support
 - [x] Streaming responses
 - [x] Automatic retries with exponential backoff
-- [ ] Anthropic provider via the unified interface
+- [x] Anthropic provider via the unified interface
 - [x] Token counting and cost tracking
 - [ ] Rate limiting
 - [ ] RAG helper utilities
