@@ -46,3 +46,40 @@ export function calculateCostUsd(
 
   return roundCurrency(promptCost + completionCost);
 }
+
+/** Pricing used when a model is not present in a provider's pricing table. */
+const ZERO_PRICING: ModelPricing = {
+  promptCostPer1k: 0,
+  completionCostPer1k: 0,
+};
+
+/**
+ * Resolve the pricing for a model from a provider's pricing table.
+ *
+ * Tries an exact match first, then the longest matching key prefix (so dated
+ * snapshots such as `gpt-4o-2024-08-06` or `claude-3-5-sonnet-20241022` resolve
+ * to their base model), and finally falls back to zero cost for an unknown
+ * model so it degrades gracefully rather than throwing.
+ *
+ * The matching algorithm is provider-agnostic; only the table differs, so every
+ * provider shares this one implementation.
+ *
+ * @param table A provider's per-1,000-token pricing, keyed by model id.
+ * @param model The model id to price.
+ * @returns The resolved {@link ModelPricing}.
+ */
+export function resolveModelPricing(
+  table: Record<string, ModelPricing>,
+  model: string,
+): ModelPricing {
+  const exact = table[model];
+  if (exact) {
+    return exact;
+  }
+
+  const prefixMatch = Object.keys(table)
+    .filter((known) => model.startsWith(known))
+    .sort((a, b) => b.length - a.length)[0];
+
+  return prefixMatch ? table[prefixMatch] : ZERO_PRICING;
+}

@@ -8,7 +8,11 @@ import OpenAI, {
   PermissionDeniedError,
   RateLimitError,
 } from 'openai';
-import { calculateCostUsd, ModelPricing } from '../core/cost-calculator';
+import {
+  calculateCostUsd,
+  ModelPricing,
+  resolveModelPricing,
+} from '../core/cost-calculator';
 import {
   AiAuthenticationError,
   AiConnectionError,
@@ -18,8 +22,6 @@ import {
   AiRateLimitError,
   AiTimeoutError,
 } from '../core/errors';
-import { RateLimiter } from '../core/rate-limiter';
-import { withRetry } from '../core/retry';
 import { AiModuleOptions } from '../interfaces/ai-options.interface';
 import {
   CompletionChunk,
@@ -47,28 +49,6 @@ const OPENAI_PRICING: Record<string, ModelPricing> = {
   'gpt-3.5-turbo': { promptCostPer1k: 0.0005, completionCostPer1k: 0.0015 },
 };
 
-const ZERO_PRICING: ModelPricing = {
-  promptCostPer1k: 0,
-  completionCostPer1k: 0,
-};
-
-/**
- * Resolve the per-1,000-token pricing for an OpenAI model, matching dated
- * snapshots to their base model and falling back to zero for unknown ids.
- */
-function resolveOpenAiPricing(model: string): ModelPricing {
-  const exact = OPENAI_PRICING[model];
-  if (exact) {
-    return exact;
-  }
-
-  const prefixMatch = Object.keys(OPENAI_PRICING)
-    .filter((known) => model.startsWith(known))
-    .sort((a, b) => b.length - a.length)[0];
-
-  return prefixMatch ? OPENAI_PRICING[prefixMatch] : ZERO_PRICING;
-}
-
 /**
  * LLM provider backed by the official OpenAI SDK.
  *
@@ -79,7 +59,6 @@ function resolveOpenAiPricing(model: string): ModelPricing {
  */
 export class OpenAiProvider extends BaseProvider {
   private readonly client: OpenAI;
-  private readonly rateLimiter?: RateLimiter;
 
   /**
    * @param options The resolved module options (API key, default model, timeout,
@@ -100,9 +79,6 @@ export class OpenAiProvider extends BaseProvider {
         // SDK's built-in retrying is disabled to avoid compounding attempts.
         maxRetries: 0,
       });
-    if (options.rateLimit) {
-      this.rateLimiter = new RateLimiter(options.rateLimit);
-    }
   }
 
   /**
@@ -158,26 +134,6 @@ export class OpenAiProvider extends BaseProvider {
     }
   }
 
-  /**
-   * Acquire a rate-limit slot (when configured) and run an operation with
-   * exponential-backoff retries. Centralising this keeps the retry and
-   * rate-limit wiring out of the individual request methods.
-   */
-  private run<T>(operation: () => Promise<T>): Promise<T> {
-    return withRetry(
-      async () => {
-        if (this.rateLimiter) {
-          await this.rateLimiter.acquire();
-        }
-        return operation();
-      },
-      {
-        maxRetries: this.options.maxRetries,
-        shouldRetry: (error) => this.isRetryable(error),
-      },
-    );
-  }
-
   /** Build the OpenAI request parameters shared by both completion modes. */
   private buildParams(
     request: CompletionRequest,
@@ -226,7 +182,7 @@ export class OpenAiProvider extends BaseProvider {
     const totalTokens = usage?.total_tokens ?? promptTokens + completionTokens;
     const estimatedCostUsd = calculateCostUsd(
       { promptTokens, completionTokens },
-      resolveOpenAiPricing(model),
+      resolveModelPricing(OPENAI_PRICING, model),
     );
 
     return {
@@ -236,7 +192,7 @@ export class OpenAiProvider extends BaseProvider {
   }
 
   /** Decide whether an OpenAI SDK error is worth retrying. */
-  private isRetryable(error: unknown): boolean {
+  protected isRetryable(error: unknown): boolean {
     if (
       error instanceof AuthenticationError ||
       error instanceof PermissionDeniedError ||

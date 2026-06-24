@@ -4,7 +4,7 @@ import { AiService } from './ai.service';
 import { AI_MODULE_OPTIONS, AI_PROVIDER } from './constants';
 import { AiModuleOptions } from './interfaces/ai-options.interface';
 import { AiProvider } from './interfaces/provider.interface';
-import { PlaceholderProvider } from './providers/base.provider';
+import { AnthropicProvider } from './providers/anthropic.provider';
 import { OpenAiProvider } from './providers/openai.provider';
 
 /**
@@ -66,18 +66,16 @@ export class AiModule {
   }
 
   /**
-   * Instantiate the provider implementation for the configured options.
-   *
-   * The OpenAI provider is fully implemented. Providers that are not yet
-   * available fall back to a {@link PlaceholderProvider} whose operations reject
-   * with a clear "not implemented" error, so the module still wires up cleanly.
+   * Instantiate the provider implementation for the configured options. Both
+   * providers implement the same {@link AiProvider} contract, so the resulting
+   * {@link AiService} behaves identically regardless of which is selected.
    */
   private static createProvider(options: AiModuleOptions): AiProvider {
     switch (options.provider) {
       case 'openai':
         return new OpenAiProvider(options);
       case 'anthropic':
-        return new PlaceholderProvider(options);
+        return new AnthropicProvider(options);
       default:
         throw new Error(`Unsupported AI provider: ${String(options.provider)}`);
     }

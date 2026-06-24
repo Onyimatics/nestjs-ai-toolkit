@@ -1,4 +1,5 @@
-import { NotImplementedException } from '@nestjs/common';
+import { RateLimiter } from '../core/rate-limiter';
+import { withRetry } from '../core/retry';
 import { AiModuleOptions } from '../interfaces/ai-options.interface';
 import {
   CompletionChunk,
@@ -11,12 +12,22 @@ import { AiProvider } from '../interfaces/provider.interface';
  * Shared base class for all LLM provider implementations.
  *
  * Concrete providers (OpenAI, Anthropic, ...) extend this class and implement
- * {@link complete} and {@link stream}. The base captures the resolved module
- * options and offers small helpers that every provider needs, keeping
- * vendor-specific code confined to the subclasses.
+ * {@link complete} and {@link stream}. The base owns the cross-cutting wiring
+ * that every provider needs (model resolution, optional rate limiting and
+ * exponential-backoff retries), so vendor-specific code in the subclasses stays
+ * focused on translating requests, responses and errors. The retry and
+ * rate-limit logic therefore lives here exactly once, never duplicated per
+ * provider.
  */
 export abstract class BaseProvider implements AiProvider {
-  protected constructor(protected readonly options: AiModuleOptions) {}
+  /** Optional client-side rate limiter, created when configured in options. */
+  protected readonly rateLimiter?: RateLimiter;
+
+  protected constructor(protected readonly options: AiModuleOptions) {
+    if (options.rateLimit) {
+      this.rateLimiter = new RateLimiter(options.rateLimit);
+    }
+  }
 
   /**
    * Produce a single, complete chat completion.
@@ -42,33 +53,39 @@ export abstract class BaseProvider implements AiProvider {
   protected resolveModel(request: CompletionRequest): string {
     return request.model ?? this.options.defaultModel;
   }
-}
 
-/**
- * A placeholder provider for providers that are configured but not yet
- * implemented (currently `anthropic`). Every operation fails with a clear
- * {@link NotImplementedException} so the module still wires up cleanly while
- * making it obvious that the selected provider is unavailable.
- */
-export class PlaceholderProvider extends BaseProvider {
-  constructor(options: AiModuleOptions) {
-    super(options);
-  }
-
-  /** Always rejects: the configured provider is not implemented yet. */
-  complete(_request: CompletionRequest): Promise<CompletionResponse> {
-    return Promise.reject(this.notImplemented());
-  }
-
-  /** Always throws: the configured provider is not implemented yet. */
-  stream(_request: CompletionRequest): AsyncIterable<CompletionChunk> {
-    throw this.notImplemented();
-  }
-
-  /** Build the shared "not implemented" error for the configured provider. */
-  private notImplemented(): NotImplementedException {
-    return new NotImplementedException(
-      `The '${this.options.provider}' provider is not implemented yet.`,
+  /**
+   * Acquire a rate-limit slot (when configured) and run an operation with
+   * exponential-backoff retries. Shared by every provider so the retry and
+   * rate-limit wiring is defined in a single place.
+   *
+   * @typeParam T The resolved value type of the operation.
+   * @param operation The async SDK call to execute.
+   * @returns A promise resolving to the operation's result.
+   */
+  protected run<T>(operation: () => Promise<T>): Promise<T> {
+    return withRetry(
+      async () => {
+        if (this.rateLimiter) {
+          await this.rateLimiter.acquire();
+        }
+        return operation();
+      },
+      {
+        maxRetries: this.options.maxRetries,
+        shouldRetry: (error) => this.isRetryable(error),
+      },
     );
+  }
+
+  /**
+   * Whether an error thrown by the underlying SDK is transient and worth
+   * retrying. Providers override this with SDK-specific logic; by default
+   * nothing is retried.
+   *
+   * @param _error The error thrown by a failed operation.
+   */
+  protected isRetryable(_error: unknown): boolean {
+    return false;
   }
 }

@@ -3,44 +3,24 @@ import { AiModule } from '../src/ai.module';
 import { AiService } from '../src/ai.service';
 
 describe('AiModule', () => {
-  it('provides AiService backed by the OpenAI provider via forRoot', async () => {
-    const moduleRef: TestingModule = await Test.createTestingModule({
-      imports: [
-        AiModule.forRoot({
-          provider: 'openai',
-          apiKey: 'test-key',
-          defaultModel: 'gpt-4o',
-        }),
-      ],
-    }).compile();
+  // Instantiating a provider creates its SDK client but makes no network call,
+  // so configuring forRoot is safe in tests without a real key.
+  it.each(['openai', 'anthropic'] as const)(
+    'provides AiService when configured with the %s provider',
+    async (provider) => {
+      const defaultModel = provider === 'openai' ? 'gpt-4o' : 'claude-sonnet-4';
+      const moduleRef: TestingModule = await Test.createTestingModule({
+        imports: [
+          AiModule.forRoot({ provider, apiKey: 'test-key', defaultModel }),
+        ],
+      }).compile();
 
-    // Instantiating the OpenAI provider creates an SDK client but makes no
-    // network call, so this is safe without a real key.
-    const service = moduleRef.get<AiService>(AiService);
-    expect(service).toBeInstanceOf(AiService);
+      const service = moduleRef.get<AiService>(AiService);
+      expect(service).toBeInstanceOf(AiService);
 
-    await moduleRef.close();
-  });
-
-  it('rejects with a clear error for a provider that is not implemented yet', async () => {
-    const moduleRef = await Test.createTestingModule({
-      imports: [
-        AiModule.forRoot({
-          provider: 'anthropic',
-          apiKey: 'test-key',
-          defaultModel: 'claude-sonnet-4',
-        }),
-      ],
-    }).compile();
-
-    const service = moduleRef.get(AiService);
-
-    await expect(
-      service.complete({ messages: [{ role: 'user', content: 'hi' }] }),
-    ).rejects.toThrow(/not implemented yet/i);
-
-    await moduleRef.close();
-  });
+      await moduleRef.close();
+    },
+  );
 
   it('throws a validation error for invalid options', () => {
     expect(() =>
