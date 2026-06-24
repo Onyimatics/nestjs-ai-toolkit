@@ -8,11 +8,7 @@ import OpenAI, {
   PermissionDeniedError,
   RateLimitError,
 } from 'openai';
-import {
-  calculateCostUsd,
-  ModelPricing,
-  resolveModelPricing,
-} from '../core/cost-calculator';
+import { buildUsage } from '../core/cost-calculator';
 import {
   AiAuthenticationError,
   AiConnectionError,
@@ -31,23 +27,8 @@ import {
 import { Message } from '../interfaces/message.interface';
 import { BaseProvider } from './base.provider';
 
-/** Identifier used when tagging errors and selecting pricing for this provider. */
+/** Identifier used when tagging errors raised by this provider. */
 const PROVIDER_NAME = 'openai';
-
-/**
- * Known OpenAI model pricing, in US dollars per 1,000 tokens. Dated snapshot
- * ids (for example `gpt-4o-2024-08-06`) resolve to their base model by
- * longest-prefix match; unknown models fall back to zero cost.
- */
-const OPENAI_PRICING: Record<string, ModelPricing> = {
-  'gpt-4o': { promptCostPer1k: 0.0025, completionCostPer1k: 0.01 },
-  'gpt-4o-mini': { promptCostPer1k: 0.00015, completionCostPer1k: 0.0006 },
-  'gpt-4.1': { promptCostPer1k: 0.002, completionCostPer1k: 0.008 },
-  'gpt-4.1-mini': { promptCostPer1k: 0.0004, completionCostPer1k: 0.0016 },
-  'gpt-4-turbo': { promptCostPer1k: 0.01, completionCostPer1k: 0.03 },
-  'gpt-4': { promptCostPer1k: 0.03, completionCostPer1k: 0.06 },
-  'gpt-3.5-turbo': { promptCostPer1k: 0.0005, completionCostPer1k: 0.0015 },
-};
 
 /**
  * LLM provider backed by the official OpenAI SDK.
@@ -179,15 +160,15 @@ export class OpenAiProvider extends BaseProvider {
     const usage = response.usage;
     const promptTokens = usage?.prompt_tokens ?? 0;
     const completionTokens = usage?.completion_tokens ?? 0;
-    const totalTokens = usage?.total_tokens ?? promptTokens + completionTokens;
-    const estimatedCostUsd = calculateCostUsd(
-      { promptTokens, completionTokens },
-      resolveModelPricing(OPENAI_PRICING, model),
-    );
 
     return {
       content,
-      usage: { promptTokens, completionTokens, totalTokens, estimatedCostUsd },
+      usage: buildUsage(
+        model,
+        promptTokens,
+        completionTokens,
+        this.options.pricing,
+      ),
     };
   }
 

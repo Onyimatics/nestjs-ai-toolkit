@@ -38,8 +38,12 @@ export interface CompletionUsage {
   /** Total tokens billed for the request (`promptTokens + completionTokens`). */
   totalTokens: number;
 
-  /** Estimated cost of the request in US dollars. */
-  estimatedCostUsd: number;
+  /**
+   * Estimated cost of the request in US dollars, or `null` when the model's
+   * pricing is not known. It is `null` (never a silent `0`) for an unpriced
+   * model so callers can tell "free" apart from "pricing unavailable".
+   */
+  estimatedCostUsd: number | null;
 }
 
 /**

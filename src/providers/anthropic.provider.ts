@@ -8,11 +8,7 @@ import Anthropic, {
   PermissionDeniedError,
   RateLimitError,
 } from '@anthropic-ai/sdk';
-import {
-  calculateCostUsd,
-  ModelPricing,
-  resolveModelPricing,
-} from '../core/cost-calculator';
+import { buildUsage } from '../core/cost-calculator';
 import {
   AiAuthenticationError,
   AiConnectionError,
@@ -31,7 +27,7 @@ import {
 import { Message } from '../interfaces/message.interface';
 import { BaseProvider } from './base.provider';
 
-/** Identifier used when tagging errors and selecting pricing for this provider. */
+/** Identifier used when tagging errors raised by this provider. */
 const PROVIDER_NAME = 'anthropic';
 
 /**
@@ -41,21 +37,6 @@ const PROVIDER_NAME = 'anthropic';
  * generated, so a generous default does not inflate cost for short replies.
  */
 const DEFAULT_MAX_TOKENS = 4096;
-
-/**
- * Known Anthropic model pricing, in US dollars per 1,000 tokens. Dated snapshot
- * ids (for example `claude-3-5-sonnet-20241022`) resolve to their base model by
- * longest-prefix match; unknown models fall back to zero cost.
- */
-const ANTHROPIC_PRICING: Record<string, ModelPricing> = {
-  'claude-opus-4': { promptCostPer1k: 0.015, completionCostPer1k: 0.075 },
-  'claude-sonnet-4': { promptCostPer1k: 0.003, completionCostPer1k: 0.015 },
-  'claude-3-5-sonnet': { promptCostPer1k: 0.003, completionCostPer1k: 0.015 },
-  'claude-3-5-haiku': { promptCostPer1k: 0.0008, completionCostPer1k: 0.004 },
-  'claude-3-opus': { promptCostPer1k: 0.015, completionCostPer1k: 0.075 },
-  'claude-3-sonnet': { promptCostPer1k: 0.003, completionCostPer1k: 0.015 },
-  'claude-3-haiku': { promptCostPer1k: 0.00025, completionCostPer1k: 0.00125 },
-};
 
 /**
  * LLM provider backed by the official Anthropic SDK.
@@ -210,15 +191,15 @@ export class AnthropicProvider extends BaseProvider {
       .join('');
     const promptTokens = response.usage.input_tokens;
     const completionTokens = response.usage.output_tokens;
-    const totalTokens = promptTokens + completionTokens;
-    const estimatedCostUsd = calculateCostUsd(
-      { promptTokens, completionTokens },
-      resolveModelPricing(ANTHROPIC_PRICING, model),
-    );
 
     return {
       content,
-      usage: { promptTokens, completionTokens, totalTokens, estimatedCostUsd },
+      usage: buildUsage(
+        model,
+        promptTokens,
+        completionTokens,
+        this.options.pricing,
+      ),
     };
   }
 

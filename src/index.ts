@@ -44,8 +44,16 @@ export type { AiErrorOptions } from './core/errors';
 export { withRetry } from './core/retry';
 export type { RetryOptions } from './core/retry';
 export { RateLimiter } from './core/rate-limiter';
-export { calculateCostUsd } from './core/cost-calculator';
-export type { ModelPricing, TokenCounts } from './core/cost-calculator';
+
+// Cost and pricing
+export { calculateCostUsd, buildUsage } from './core/cost-calculator';
+export type { TokenCounts } from './core/cost-calculator';
+export { DEFAULT_MODEL_PRICING, resolveModelPricing } from './core/pricing';
+export type { ModelPricing, ModelPricingMap } from './core/pricing';
+
+// Usage tracking
+export { UsageTracker } from './core/usage-tracker';
+export type { UsageTotals } from './core/usage-tracker';
 
 // Helpers
 export { estimateTokens, estimateMessageTokens } from './utils/token-counter';

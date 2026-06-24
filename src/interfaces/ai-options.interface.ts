@@ -1,3 +1,5 @@
+import type { ModelPricingMap } from '../core/pricing';
+
 /**
  * The set of LLM providers supported by the toolkit.
  */
@@ -39,4 +41,18 @@ export interface AiModuleOptions {
 
   /** Request timeout, in milliseconds. */
   timeout?: number;
+
+  /**
+   * Custom model pricing, merged over the built-in pricing registry. Use this to
+   * add pricing for new models or correct prices that have changed, without
+   * modifying the library. Rates are in US dollars per 1,000 tokens.
+   */
+  pricing?: ModelPricingMap;
+
+  /**
+   * Opt in to accumulating usage totals (tokens, cost, request count) on the
+   * {@link AiService} across completed requests. Disabled by default. Read the
+   * totals with `AiService.getUsageTotals()`.
+   */
+  trackUsage?: boolean;
 }

@@ -1,4 +1,5 @@
 import { AiService } from '../src/ai.service';
+import { AiModuleOptions } from '../src/interfaces/ai-options.interface';
 import {
   CompletionChunk,
   CompletionRequest,
@@ -6,17 +7,35 @@ import {
 } from '../src/interfaces/completion.interface';
 import { AiProvider } from '../src/interfaces/provider.interface';
 
-function fakeResponse(content: string): CompletionResponse {
+function makeOptions(
+  overrides: Partial<AiModuleOptions> = {},
+): AiModuleOptions {
+  return {
+    provider: 'openai',
+    apiKey: 'test-key',
+    defaultModel: 'gpt-4o',
+    ...overrides,
+  };
+}
+
+function fakeResponse(
+  content: string,
+  estimatedCostUsd: number | null = 0,
+): CompletionResponse {
   return {
     content,
     usage: {
-      promptTokens: 1,
-      completionTokens: 1,
-      totalTokens: 2,
-      estimatedCostUsd: 0,
+      promptTokens: 10,
+      completionTokens: 20,
+      totalTokens: 30,
+      estimatedCostUsd,
     },
   };
 }
+
+const request: CompletionRequest = {
+  messages: [{ role: 'user', content: 'Hi' }],
+};
 
 describe('AiService', () => {
   it('delegates complete() to the configured provider', async () => {
@@ -24,10 +43,7 @@ describe('AiService', () => {
       complete: jest.fn().mockResolvedValue(fakeResponse('hi')),
       stream: jest.fn(),
     };
-    const service = new AiService(provider);
-    const request: CompletionRequest = {
-      messages: [{ role: 'user', content: 'Hi' }],
-    };
+    const service = new AiService(provider, makeOptions());
 
     const result = await service.complete(request);
 
@@ -44,10 +60,7 @@ describe('AiService', () => {
       complete: jest.fn(),
       stream: jest.fn().mockReturnValue(gen()),
     };
-    const service = new AiService(provider);
-    const request: CompletionRequest = {
-      messages: [{ role: 'user', content: 'Hi' }],
-    };
+    const service = new AiService(provider, makeOptions());
 
     const stream = await service.stream(request);
     const chunks: CompletionChunk[] = [];
@@ -57,5 +70,40 @@ describe('AiService', () => {
 
     expect(provider.stream).toHaveBeenCalledWith(request);
     expect(chunks).toEqual([{ content: 'a' }, { content: 'b' }]);
+  });
+
+  it('does not track usage unless trackUsage is enabled', async () => {
+    const provider: AiProvider = {
+      complete: jest.fn().mockResolvedValue(fakeResponse('hi')),
+      stream: jest.fn(),
+    };
+    const service = new AiService(provider, makeOptions());
+
+    await service.complete(request);
+
+    expect(service.getUsageTotals()).toBeUndefined();
+  });
+
+  it('accumulates usage totals across requests when trackUsage is enabled', async () => {
+    const provider: AiProvider = {
+      complete: jest.fn().mockResolvedValue(fakeResponse('hi', 0.01)),
+      stream: jest.fn(),
+    };
+    const service = new AiService(provider, makeOptions({ trackUsage: true }));
+
+    await service.complete(request);
+    await service.complete(request);
+
+    expect(service.getUsageTotals()).toEqual({
+      totalPromptTokens: 20,
+      totalCompletionTokens: 40,
+      totalTokens: 60,
+      totalEstimatedCostUsd: 0.02,
+      requestCount: 2,
+      requestsWithUnknownCost: 0,
+    });
+
+    service.resetUsage();
+    expect(service.getUsageTotals()?.requestCount).toBe(0);
   });
 });

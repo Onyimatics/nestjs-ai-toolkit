@@ -12,6 +12,11 @@ import { OpenAiProvider } from './providers/openai.provider';
  * registration fails fast on misconfiguration instead of surfacing obscure
  * errors at request time.
  */
+const modelPricingSchema = z.object({
+  promptCostPer1k: z.number().nonnegative(),
+  completionCostPer1k: z.number().nonnegative(),
+});
+
 const optionsSchema = z.object({
   provider: z.enum(['openai', 'anthropic']),
   apiKey: z.string().min(1, 'apiKey is required'),
@@ -24,6 +29,8 @@ const optionsSchema = z.object({
     })
     .optional(),
   timeout: z.number().int().positive().optional(),
+  pricing: z.record(z.string(), modelPricingSchema).optional(),
+  trackUsage: z.boolean().optional(),
 });
 
 /**
