@@ -3,7 +3,7 @@ import { AiModule } from '../src/ai.module';
 import { AiService } from '../src/ai.service';
 
 describe('AiModule', () => {
-  it('provides AiService when configured through forRoot', async () => {
+  it('provides AiService backed by the OpenAI provider via forRoot', async () => {
     const moduleRef: TestingModule = await Test.createTestingModule({
       imports: [
         AiModule.forRoot({
@@ -14,13 +14,15 @@ describe('AiModule', () => {
       ],
     }).compile();
 
+    // Instantiating the OpenAI provider creates an SDK client but makes no
+    // network call, so this is safe without a real key.
     const service = moduleRef.get<AiService>(AiService);
     expect(service).toBeInstanceOf(AiService);
 
     await moduleRef.close();
   });
 
-  it('rejects from complete() until a real provider is implemented', async () => {
+  it('rejects with a clear error for a provider that is not implemented yet', async () => {
     const moduleRef = await Test.createTestingModule({
       imports: [
         AiModule.forRoot({
@@ -35,7 +37,7 @@ describe('AiModule', () => {
 
     await expect(
       service.complete({ messages: [{ role: 'user', content: 'hi' }] }),
-    ).rejects.toThrow(/Milestone 2/);
+    ).rejects.toThrow(/not implemented yet/i);
 
     await moduleRef.close();
   });

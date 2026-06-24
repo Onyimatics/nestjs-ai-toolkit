@@ -5,6 +5,7 @@ import { AI_MODULE_OPTIONS, AI_PROVIDER } from './constants';
 import { AiModuleOptions } from './interfaces/ai-options.interface';
 import { AiProvider } from './interfaces/provider.interface';
 import { PlaceholderProvider } from './providers/base.provider';
+import { OpenAiProvider } from './providers/openai.provider';
 
 /**
  * Runtime validation schema for {@link AiModuleOptions}. Validating at module
@@ -67,10 +68,18 @@ export class AiModule {
   /**
    * Instantiate the provider implementation for the configured options.
    *
-   * Concrete OpenAI and Anthropic providers arrive in Milestone 2; until then a
-   * placeholder is returned so that the module wires up cleanly.
+   * The OpenAI provider is fully implemented. Providers that are not yet
+   * available fall back to a {@link PlaceholderProvider} whose operations reject
+   * with a clear "not implemented" error, so the module still wires up cleanly.
    */
   private static createProvider(options: AiModuleOptions): AiProvider {
-    return new PlaceholderProvider(options);
+    switch (options.provider) {
+      case 'openai':
+        return new OpenAiProvider(options);
+      case 'anthropic':
+        return new PlaceholderProvider(options);
+      default:
+        throw new Error(`Unsupported AI provider: ${String(options.provider)}`);
+    }
   }
 }

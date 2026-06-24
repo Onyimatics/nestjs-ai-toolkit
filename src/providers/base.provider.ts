@@ -45,29 +45,30 @@ export abstract class BaseProvider implements AiProvider {
 }
 
 /**
- * A placeholder provider used until concrete implementations land in
- * Milestone 2. Every operation throws {@link NotImplementedException} so the
- * module wires up cleanly while making it obvious that no real provider has been
- * configured yet.
+ * A placeholder provider for providers that are configured but not yet
+ * implemented (currently `anthropic`). Every operation fails with a clear
+ * {@link NotImplementedException} so the module still wires up cleanly while
+ * making it obvious that the selected provider is unavailable.
  */
 export class PlaceholderProvider extends BaseProvider {
   constructor(options: AiModuleOptions) {
     super(options);
   }
 
-  /** Always rejects: provider implementations arrive in Milestone 2. */
+  /** Always rejects: the configured provider is not implemented yet. */
   complete(_request: CompletionRequest): Promise<CompletionResponse> {
-    return Promise.reject(
-      new NotImplementedException(
-        'AI provider implementations arrive in Milestone 2. No provider is configured yet.',
-      ),
-    );
+    return Promise.reject(this.notImplemented());
   }
 
-  /** Always throws: provider implementations arrive in Milestone 2. */
+  /** Always throws: the configured provider is not implemented yet. */
   stream(_request: CompletionRequest): AsyncIterable<CompletionChunk> {
-    throw new NotImplementedException(
-      'AI provider implementations arrive in Milestone 2. No provider is configured yet.',
+    throw this.notImplemented();
+  }
+
+  /** Build the shared "not implemented" error for the configured provider. */
+  private notImplemented(): NotImplementedException {
+    return new NotImplementedException(
+      `The '${this.options.provider}' provider is not implemented yet.`,
     );
   }
 }
