@@ -6,6 +6,14 @@ import type { ModelPricingMap } from '../core/pricing';
 export type AiProviderName = 'openai' | 'anthropic';
 
 /**
+ * How the rate limiter behaves when the limit has been reached.
+ *
+ * - `queue`: wait in FIFO order for capacity, up to `maxWaitMs`, then throw.
+ * - `fail-fast`: reject immediately without waiting.
+ */
+export type RateLimitMode = 'queue' | 'fail-fast';
+
+/**
  * Configuration for built-in, client-side rate limiting.
  */
 export interface RateLimitOptions {
@@ -14,6 +22,21 @@ export interface RateLimitOptions {
 
   /** Length of the rate-limit window, in milliseconds. */
   windowMs: number;
+
+  /**
+   * Behaviour when the limit is reached.
+   *
+   * @defaultValue 'queue'
+   */
+  mode?: RateLimitMode;
+
+  /**
+   * In `queue` mode, the maximum time (in milliseconds) a request may wait for
+   * capacity before failing with a `RateLimitExceededError`.
+   *
+   * @defaultValue 30000
+   */
+  maxWaitMs?: number;
 }
 
 /**

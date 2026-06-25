@@ -41,6 +41,17 @@ export interface RetryOptions {
   shouldRetry?: (error: unknown) => boolean;
 
   /**
+   * Returns a provider-suggested delay, in milliseconds, for the given error,
+   * for example parsed from an HTTP `Retry-After` header on a 429 response. When
+   * it returns a number, that delay is used for the next attempt instead of the
+   * computed exponential backoff, so the toolkit honours the provider's
+   * guidance rather than guessing. Return `undefined` to fall back to backoff.
+   *
+   * @param error The error thrown by the failed attempt.
+   */
+  retryAfterMs?: (error: unknown) => number | undefined;
+
+  /**
    * Hook invoked after a failed attempt, just before the next one is scheduled.
    * Useful for logging or instrumentation.
    *
@@ -49,6 +60,76 @@ export interface RetryOptions {
    * @param delayMs The delay, in milliseconds, before the next attempt.
    */
   onRetry?: (error: unknown, attempt: number, delayMs: number) => void;
+}
+
+/**
+ * Parse an HTTP `Retry-After` header value into a delay in milliseconds.
+ *
+ * The header may be either a number of seconds or an HTTP date. Returns
+ * `undefined` when the value is missing or cannot be parsed.
+ *
+ * @param headerValue The raw `Retry-After` header value.
+ * @returns The suggested delay in milliseconds, or `undefined`.
+ */
+export function parseRetryAfterMs(
+  headerValue: string | null | undefined,
+): number | undefined {
+  if (headerValue === null || headerValue === undefined) {
+    return undefined;
+  }
+
+  const trimmed = headerValue.trim();
+  if (trimmed === '') {
+    return undefined;
+  }
+
+  // Retry-After is most commonly a number of seconds.
+  const seconds = Number(trimmed);
+  if (Number.isFinite(seconds)) {
+    return Math.max(0, Math.round(seconds * 1000));
+  }
+
+  // Otherwise it may be an HTTP date.
+  const dateMs = Date.parse(trimmed);
+  if (!Number.isNaN(dateMs)) {
+    return Math.max(0, dateMs - Date.now());
+  }
+
+  return undefined;
+}
+
+/**
+ * Safely read a header value from an unknown headers object, supporting both a
+ * `Headers`-like object (with a `get` method) and a plain record. Returns
+ * `undefined` when the value is absent or not a string.
+ */
+function readHeaderValue(headers: unknown, name: string): string | undefined {
+  if (typeof headers !== 'object' || headers === null) {
+    return undefined;
+  }
+
+  const record = headers as Record<string, unknown>;
+  const getter = record['get'];
+  if (typeof getter === 'function') {
+    const value: unknown = (getter as (key: string) => unknown).call(
+      headers,
+      name,
+    );
+    return typeof value === 'string' ? value : undefined;
+  }
+
+  const direct = record[name];
+  return typeof direct === 'string' ? direct : undefined;
+}
+
+/**
+ * Extract a suggested retry delay (ms) from an unknown headers object by reading
+ * and parsing its `Retry-After` header. Returns `undefined` when absent.
+ *
+ * @param headers The error's headers (for example an SDK error's `headers`).
+ */
+export function retryAfterMsFromHeaders(headers: unknown): number | undefined {
+  return parseRetryAfterMs(readHeaderValue(headers, 'retry-after'));
 }
 
 /**
@@ -96,7 +177,11 @@ export async function withRetry<T>(
         break;
       }
 
-      const delayMs = Math.min(baseDelayMs * 2 ** attempt, maxDelayMs);
+      // Honour a provider-suggested delay (e.g. Retry-After) when present;
+      // otherwise fall back to capped exponential backoff.
+      const suggested = options.retryAfterMs?.(error);
+      const backoff = Math.min(baseDelayMs * 2 ** attempt, maxDelayMs);
+      const delayMs = suggested ?? backoff;
       options.onRetry?.(error, attempt + 1, delayMs);
       await sleep(delayMs);
     }

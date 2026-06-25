@@ -50,6 +50,15 @@ export class AiAuthenticationError extends AiError {}
 export class AiRateLimitError extends AiError {}
 
 /**
+ * Raised by the toolkit's own client-side rate limiter when a request cannot be
+ * admitted: either the configured maximum wait elapsed while queued, or the
+ * limiter is configured in fail-fast mode and was already at capacity. This is
+ * distinct from {@link AiRateLimitError}, which represents a rate limit reported
+ * by the provider's API.
+ */
+export class RateLimitExceededError extends AiError {}
+
+/**
  * Raised when a request to the provider exceeds its configured timeout.
  */
 export class AiTimeoutError extends AiError {}

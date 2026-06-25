@@ -18,6 +18,7 @@ import {
   AiRateLimitError,
   AiTimeoutError,
 } from '../core/errors';
+import { retryAfterMsFromHeaders } from '../core/retry';
 import { AiModuleOptions } from '../interfaces/ai-options.interface';
 import {
   CompletionChunk,
@@ -193,6 +194,17 @@ export class OpenAiProvider extends BaseProvider {
       return error.status === undefined || error.status >= 500;
     }
     return false;
+  }
+
+  /**
+   * Honour OpenAI's `Retry-After` header on rate-limit responses so retries
+   * wait exactly as long as the API asks rather than guessing.
+   */
+  protected getRetryAfterMs(error: unknown): number | undefined {
+    if (error instanceof RateLimitError) {
+      return retryAfterMsFromHeaders(error.headers);
+    }
+    return undefined;
   }
 
   /** Map an OpenAI SDK error onto the toolkit's {@link AiError} hierarchy. */

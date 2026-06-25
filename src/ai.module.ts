@@ -26,6 +26,8 @@ const optionsSchema = z.object({
     .object({
       maxRequests: z.number().int().positive(),
       windowMs: z.number().int().positive(),
+      mode: z.enum(['queue', 'fail-fast']).optional(),
+      maxWaitMs: z.number().int().nonnegative().optional(),
     })
     .optional(),
   timeout: z.number().int().positive().optional(),

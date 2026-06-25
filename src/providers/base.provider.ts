@@ -74,6 +74,7 @@ export abstract class BaseProvider implements AiProvider {
       {
         maxRetries: this.options.maxRetries,
         shouldRetry: (error) => this.isRetryable(error),
+        retryAfterMs: (error) => this.getRetryAfterMs(error),
       },
     );
   }
@@ -87,5 +88,17 @@ export abstract class BaseProvider implements AiProvider {
    */
   protected isRetryable(_error: unknown): boolean {
     return false;
+  }
+
+  /**
+   * The provider-suggested retry delay (ms) for an error, for example parsed
+   * from a `Retry-After` header on a 429 response. Providers override this to
+   * read their SDK's error shape; by default no delay is suggested and the
+   * retry layer falls back to exponential backoff.
+   *
+   * @param _error The error thrown by a failed operation.
+   */
+  protected getRetryAfterMs(_error: unknown): number | undefined {
+    return undefined;
   }
 }

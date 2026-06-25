@@ -23,6 +23,7 @@ export type {
   AiModuleOptions,
   AiProviderName,
   RateLimitOptions,
+  RateLimitMode,
 } from './interfaces/ai-options.interface';
 
 // Providers
@@ -37,6 +38,7 @@ export {
   AiInvalidRequestError,
   AiConnectionError,
   AiProviderError,
+  RateLimitExceededError,
 } from './core/errors';
 export type { AiErrorOptions } from './core/errors';
 
